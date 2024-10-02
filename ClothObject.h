@@ -18,6 +18,13 @@ public:
 
 	wgpu::Buffer m_vertexBuffer = nullptr;
     wgpu::Buffer m_uniformBuffer = nullptr; 
+	wgpu::ShaderModule m_shaderModule = nullptr;
+
+	wgpu::BindGroupLayout m_bindGroupLayout = nullptr;
+	wgpu::BindGroupLayout m_vertexBindGroupLayout = nullptr;
+
+	wgpu::BindGroup m_bindGroup = nullptr;
+	wgpu::BindGroup m_vertexBindGroup = nullptr;
 
 	struct ClothVertex {
 		vec3 position;
@@ -44,18 +51,28 @@ public:
         float sphereRadius = 0.3f;
         float spherePeriod = 150.0f;
         float sphereRange = 2.0f;
-    }
+        float deltaT = 0.016f;
+    };
 
     struct ClothUniforms{
-        float particleMass;
+        float width;
+        float height;
+
         float particleDist;
+        float particleMass;
+        float particleScale;
+
         float maxStretch;
         float minStretch;
 
         float sphereRadius;
-        float spherePeriod;
-        float sphereRange;
-    }
+        float sphereX;
+        float sphereY;
+        float sphereZ;
+
+        float deltaT;
+        float currentT;
+    };
     
     ClothParameters parameters = ClothParameters();
     ClothUniforms uniforms = ClothUniforms();
@@ -66,6 +83,10 @@ public:
     float particleMass = totalMass / numParticles;
     float particleDist = parameters.scale / parameters.height;
 
+    float currentT = 0.0f;
+    int frame = 0;
+    vec3 sphere_pos = vec3(0.0f,0.0f,-1.0f);
+
     void updateParameters(ClothParameters& p, wgpu::Queue& queue);
 
     void initBuffers();
@@ -75,6 +96,10 @@ public:
     void computePass();
 
     void renderPass();
+
+    void updateUniforms();
+
+    void updateVertexBuffer();
 
     void terminate();
 
