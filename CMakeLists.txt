@@ -7,6 +7,10 @@ project(
 
 include(utils.cmake)
 
+#set(CMAKE_C_COMPILER cl.exe)
+#set(CMAKE_CXX_COMPILER cl.exe)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 # We add an option to enable different settings when developping the app than
 # when distributing it.
 option(DEV_MODE "Set up development helper settings" ON)
@@ -20,6 +24,8 @@ add_executable(App
 	main.cpp
 	Application.h
 	Application.cpp
+  ClothObject.h
+  ClothObject.cpp
 	ResourceManager.h
 	ResourceManager.cpp
 	implementations.cpp

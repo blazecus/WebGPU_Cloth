@@ -9,7 +9,9 @@
                 "${workspaceFolder}/imgui",
                 "${workspaceFolder}/webgpu",
                 "${workspaceFolder}/glfw",
-                "${workspaceFolder}/glfw3webgpu"
+                "${workspaceFolder}/glfw3webgpu",
+                "${workspaceFolder}/build",
+                "${workspaceFolder}/build/**"
             ],
             "defines": [
                 "_DEBUG",

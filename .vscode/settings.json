@@ -8,5 +8,8 @@
         "*.scss.liquid": "liquid-scss",
         "vector": "cpp",
         "any": "cpp"
-    }
+    },
+    "C_Cpp.default.compilerPath": "",
+    "cmake.cpptools.compilerPath": "cl.exe",
+    "Lua.workspace.library": []
 }
