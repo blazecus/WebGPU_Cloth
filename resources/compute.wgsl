@@ -73,7 +73,7 @@ fn forces(index: u32, current_pos: vec3<f32>)->vec3<f32>{
       if(farx >= 0 && farx < width && fary >= 0 && fary < i32(params.particleHeight) && addx != 0 && addy != 0){
         let diff = current_pos - particlesSrc[long_new_index].pos;
         if(rest_dist * diag_dist * 2.0f > length(diff)){
-          let spring_force = normalize(diff) * (rest_dist * diag_dist * 2- length(diff)) * k2; 
+          let spring_force = normalize(diff) * (rest_dist * diag_dist * 2.0f - length(diff)) * k2; 
           total_force = total_force + spring_force;
         }
       }
@@ -98,7 +98,7 @@ fn forces(index: u32, current_pos: vec3<f32>)->vec3<f32>{
   total_force.z += 0.0005f * params.particleScale;
 
   var multiplier = 1.0f;
-  if(y == i32(params.particleHeight - 1)){
+  if(y == i32(params.particleHeight - 1.0f)){
     multiplier = 0.0f;
   }
 
@@ -126,13 +126,13 @@ fn forces(index: u32, current_pos: vec3<f32>)->vec3<f32>{
 fn triangle_pos_conversion(square_pos: u32) -> u32{
   var diff = 0;
   //get proper position index
-  if(square_pos == 1 || square_pos == 3){
+  if(square_pos == 1u || square_pos == 3u){
     diff = i32(params.particleWidth);
   }
-  else if(square_pos == 2 || square_pos == 5){
+  else if(square_pos == 2u || square_pos == 5u){
     diff = 1;
   }
-  else if(square_pos == 4){
+  else if(square_pos == 4u){
     diff = i32(params.particleWidth) + 1;
   }
   
@@ -208,17 +208,17 @@ fn particle_to_vertex(@builtin(global_invocation_id) global_invocation_id: vec3<
     return;
   }
 
-  let cell: u32 = index / 6;
-  let row: u32 = cell / u32(i32(params.particleWidth-1));
+  let cell: u32 = index / 6u;
+  let row: u32 = cell / u32(i32(params.particleWidth - 1.0f));
   var cellIdx: u32 = cell + row;
 
-  let square_pos: u32 = index % 6;
-  var add_to_lr: u32 = 0;
-  if(square_pos > 2){
+  let square_pos: u32 = index % 6u;
+  var add_to_lr: u32 = 0u;
+  if(square_pos > 2u){
     add_to_lr = u32(3);
   }
-  let left: u32 = ((square_pos + 2) % 3) + add_to_lr;
-  let right: u32 = ((square_pos + 1) % 3) + add_to_lr;
+  let left: u32 = ((square_pos + 2u) % 3u) + add_to_lr;
+  let right: u32 = ((square_pos + 1u) % 3u) + add_to_lr;
 
   let lcellIdx = cellIdx + triangle_pos_conversion(left);
   let rcellIdx = cellIdx + triangle_pos_conversion(right);

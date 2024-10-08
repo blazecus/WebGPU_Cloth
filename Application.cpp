@@ -317,6 +317,12 @@ bool Application::initWindowAndDevice() {
   requiredLimits.limits.maxSampledTexturesPerShaderStage = 2;
   //                                                       ^ This was 1
   requiredLimits.limits.maxSamplersPerShaderStage = 1;
+  requiredLimits.limits.maxStorageBuffersPerShaderStage = 2;
+  requiredLimits.limits.maxComputeWorkgroupsPerDimension = 64;
+  requiredLimits.limits.maxComputeWorkgroupSizeX = 64;
+  requiredLimits.limits.maxComputeWorkgroupSizeZ = 1;
+  requiredLimits.limits.maxComputeWorkgroupSizeY = 1;
+  requiredLimits.limits.maxComputeInvocationsPerWorkgroup = 64;
 
   DeviceDescriptor deviceDesc;
   deviceDesc.label = "My Device";
@@ -457,7 +463,7 @@ bool Application::initRenderPipeline() {
   RenderPipelineDescriptor pipelineDesc;
 
   // Vertex fetch
-  std::vector<VertexAttribute> vertexAttribs(6);
+  std::vector<VertexAttribute> vertexAttribs(2);
 
   // Position attribute
   vertexAttribs[0].shaderLocation = 0;
