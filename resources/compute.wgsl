@@ -229,5 +229,9 @@ fn particle_to_vertex(@builtin(global_invocation_id) global_invocation_id: vec3<
   let rvec :vec3<f32> = vpos - particlesDst[rcellIdx].pos;
 
   let norm = normalize(cross(lvec, rvec));
-  vertexOut[index] = Vertex(vpos / (0.1f * params.particleScale), norm);
+  //switch dimensions
+  let nv :vec3<f32> = vec3(vpos[2], vpos[0], vpos[1]);
+  let nn : vec3<f32> = vec3(norm[2], norm[0], norm[1]);
+  //vertexOut[index] = Vertex(vpos / (0.1f * params.particleScale), norm);
+  vertexOut[index] = Vertex(nv / (0.3f * params.particleScale), nn);
 }

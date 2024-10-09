@@ -34,15 +34,18 @@ public:
   int m_bufferSize = 0;
 
   struct ClothVertex {
-    vec3 position;
-    vec3 normal; // N = local Z axis
     // garbage is necessary for 32 byte blocks
+    vec3 position;
     float garbage1;
+    vec3 normal;
     float garbage2;
   };
+
   struct ClothParticle {
     vec3 position;
+    float garbage1;
     vec3 velocity;
+    float garbage2;
   };
 
   struct ClothParameters {
@@ -58,7 +61,7 @@ public:
     float sphereRadius = 0.3f;
     float spherePeriod = 150.0f;
     float sphereRange = 2.0f;
-    float deltaT = 0.016f;
+    float deltaT = 0.008f;
   };
 
   struct ClothUniforms {
@@ -79,6 +82,7 @@ public:
 
     float deltaT;
     float currentT;
+    vec3 garbage;
   };
 
   ClothParameters parameters = ClothParameters();

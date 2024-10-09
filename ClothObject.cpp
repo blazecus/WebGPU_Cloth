@@ -81,16 +81,25 @@ void ClothObject::updateParameters(ClothParameters &p) {
 
 void ClothObject::fillBuffer(wgpu::Device &device) {
   std::vector<ClothParticle> particleData;
-  for (int x = 0; x < parameters.width; x++) {
-    for (int y = 0; y < parameters.height; y++) {
+  std::vector<ClothParticle> particleData2;
+  for (int y = 0; y < parameters.height; y++) {
+    for (int x = 0; x < parameters.width; x++) {
       ClothParticle particle;
-      particle.position = vec3(x * particleDist, y * particleDist, 0.0f);
+      particle.position = vec3(x * particleDist - parameters.scale / 2.0f, y * particleDist - parameters.scale / 2.0f, 0.0f);
       particle.velocity = vec3(0.0f, 0.0f, 0.0f);
 
       particleData.push_back(particle);
+
+      ClothParticle particle2;
+      particle2.position = vec3(x * particleDist - parameters.scale / 2.0f, y * particleDist - parameters.scale / 2.0f, 0.0f);
+      particle2.velocity = vec3(0.0f, 0.0f, 0.0f);
+
+      particleData2.push_back(particle2);
     }
   }
   device.getQueue().writeBuffer(particleBuffers[0], 0, particleData.data(),
+                                numParticles * sizeof(ClothParticle));
+  device.getQueue().writeBuffer(particleBuffers[1], 0, particleData2.data(),
                                 numParticles * sizeof(ClothParticle));
 }
 
@@ -106,7 +115,7 @@ void ClothObject::initBuffers(wgpu::Device &device) {
   // Create vertex buffer
   BufferDescriptor vbufferDesc;
   vbufferDesc.size = numVertices * sizeof(ClothVertex);
-  vbufferDesc.usage = BufferUsage::CopyDst | BufferUsage::Storage;
+  vbufferDesc.usage = BufferUsage::CopyDst | BufferUsage::Storage | BufferUsage::Vertex;
   vbufferDesc.mappedAtCreation = false;
   m_vertexBuffer = device.createBuffer(vbufferDesc);
 
@@ -232,7 +241,6 @@ void ClothObject::initBindGroup(wgpu::Device &device) {
 
   std::vector<BindGroupEntry> ventries(1, Default);
 
-  void updateVertexBuffer(wgpu::Device & device);
   ventries[0].binding = 0;
   ventries[0].buffer = m_vertexBuffer;
   ventries[0].offset = 0;
@@ -249,36 +257,39 @@ void ClothObject::computePass(wgpu::Device &device) {
   Queue queue = device.getQueue();
 
   CommandEncoderDescriptor encoderDesc = Default;
+  encoderDesc.label = "compute pass encoder";
   CommandEncoder encoder = device.createCommandEncoder(encoderDesc);
 
   ComputePassDescriptor computePassDesc;
   computePassDesc.timestampWrites = nullptr;
+  computePassDesc.label = "compute pass 1";
   ComputePassEncoder computePass = encoder.beginComputePass(computePassDesc);
 
   computePass.setPipeline(m_pipeline);
   computePass.setBindGroup(0, m_bindGroup, 0, nullptr);
   computePass.setBindGroup(1, m_vertexBindGroup, 0, nullptr);
 
-  /*uint32_t invocationCount = m_bufferSize / sizeof(float);
+  uint32_t invocationCount = m_bufferSize / sizeof(float);
   uint32_t workgroupSize = 64;
   uint32_t workgroupCount =
-      (invocationCount + workgroupSize - 1) / workgroupSize;*/
-  computePass.dispatchWorkgroups(64, 1, 1);
+      (invocationCount + workgroupSize - 1) / workgroupSize;
+  computePass.dispatchWorkgroups(workgroupCount, 1, 1);
   computePass.end();
 
   ComputePassDescriptor computePassDesc2;
   computePassDesc2.timestampWrites = nullptr;
+  computePassDesc2.label = "compute pass 2";
   ComputePassEncoder computePass2 = encoder.beginComputePass(computePassDesc2);
 
   computePass2.setPipeline(m_vertexPipeline);
   computePass2.setBindGroup(0, m_bindGroup, 0, nullptr);
   computePass2.setBindGroup(1, m_vertexBindGroup, 0, nullptr);
 
-  /*uint32_t invocationCount2 = m_bufferSize / sizeof(float);
+  uint32_t invocationCount2 = m_bufferSize / sizeof(float);
   uint32_t workgroupSize2 = 64;
   uint32_t workgroupCount2 =
-      (invocationCount2 + workgroupSize2 - 1) / workgroupSize2;*/
-  computePass2.dispatchWorkgroups(64, 1, 1);
+      (invocationCount2 + workgroupSize2 - 1) / workgroupSize2;
+  computePass2.dispatchWorkgroups(workgroupCount2, 1, 1);
   computePass2.end();
 
   CommandBuffer commands = encoder.finish(CommandBufferDescriptor{});

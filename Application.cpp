@@ -99,7 +99,6 @@ bool Application::onInit() {
 }
 
 void Application::onFrame() {
-  std::cout << "onFrame" << std::endl;
   glfwPollEvents();
   updateDragInertia();
   updateLightingUniforms();
@@ -322,10 +321,10 @@ bool Application::initWindowAndDevice() {
   //                                                       ^ This was 1
   requiredLimits.limits.maxSamplersPerShaderStage = 1;
   requiredLimits.limits.maxStorageBuffersPerShaderStage = 2;
-  requiredLimits.limits.maxComputeWorkgroupsPerDimension = 64;
-  requiredLimits.limits.maxComputeWorkgroupSizeX = 64;
-  requiredLimits.limits.maxComputeWorkgroupSizeZ = 1;
-  requiredLimits.limits.maxComputeWorkgroupSizeY = 1;
+  requiredLimits.limits.maxComputeWorkgroupsPerDimension = 65000;
+  requiredLimits.limits.maxComputeWorkgroupSizeX = 1024;
+  requiredLimits.limits.maxComputeWorkgroupSizeZ = 64;
+  requiredLimits.limits.maxComputeWorkgroupSizeY = 64;
   requiredLimits.limits.maxComputeInvocationsPerWorkgroup = 64;
   requiredLimits.limits.maxStorageBufferBindingSize = 100000000000000;
 
