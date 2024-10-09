@@ -106,7 +106,7 @@ void ClothObject::initBuffers(wgpu::Device &device) {
   // Create vertex buffer
   BufferDescriptor vbufferDesc;
   vbufferDesc.size = numVertices * sizeof(ClothVertex);
-  vbufferDesc.usage = BufferUsage::CopyDst | BufferUsage::Vertex;
+  vbufferDesc.usage = BufferUsage::CopyDst | BufferUsage::Storage;
   vbufferDesc.mappedAtCreation = false;
   m_vertexBuffer = device.createBuffer(vbufferDesc);
 
@@ -213,13 +213,13 @@ void ClothObject::initBindGroup(wgpu::Device &device) {
   entries[0].size = sizeof(ClothUniforms);
 
   // Input buffer
-  entries[1].binding = 0;
+  entries[1].binding = 1;
   entries[1].buffer = particleBuffers[frame % 2];
   entries[1].offset = 0;
   entries[1].size = numParticles * sizeof(ClothParticle);
 
   // Output buffer
-  entries[2].binding = 1;
+  entries[2].binding = 2;
   entries[2].buffer = particleBuffers[1 - (frame % 2)];
   entries[2].offset = 0;
   entries[2].size = numParticles * sizeof(ClothParticle);
@@ -259,11 +259,11 @@ void ClothObject::computePass(wgpu::Device &device) {
   computePass.setBindGroup(0, m_bindGroup, 0, nullptr);
   computePass.setBindGroup(1, m_vertexBindGroup, 0, nullptr);
 
-  uint32_t invocationCount = m_bufferSize / sizeof(float);
+  /*uint32_t invocationCount = m_bufferSize / sizeof(float);
   uint32_t workgroupSize = 64;
   uint32_t workgroupCount =
-      (invocationCount + workgroupSize - 1) / workgroupSize;
-  computePass.dispatchWorkgroups(workgroupCount, 1, 1);
+      (invocationCount + workgroupSize - 1) / workgroupSize;*/
+  computePass.dispatchWorkgroups(64, 1, 1);
   computePass.end();
 
   ComputePassDescriptor computePassDesc2;
@@ -274,11 +274,11 @@ void ClothObject::computePass(wgpu::Device &device) {
   computePass2.setBindGroup(0, m_bindGroup, 0, nullptr);
   computePass2.setBindGroup(1, m_vertexBindGroup, 0, nullptr);
 
-  uint32_t invocationCount2 = m_bufferSize / sizeof(float);
+  /*uint32_t invocationCount2 = m_bufferSize / sizeof(float);
   uint32_t workgroupSize2 = 64;
   uint32_t workgroupCount2 =
-      (invocationCount2 + workgroupSize2 - 1) / workgroupSize2;
-  computePass2.dispatchWorkgroups(workgroupCount2, 1, 1);
+      (invocationCount2 + workgroupSize2 - 1) / workgroupSize2;*/
+  computePass2.dispatchWorkgroups(64, 1, 1);
   computePass2.end();
 
   CommandBuffer commands = encoder.finish(CommandBufferDescriptor{});

@@ -105,11 +105,13 @@ void Application::onFrame() {
   updateLightingUniforms();
 
   m_cloth.processFrame(m_device);
+  m_vertexCount = m_cloth.numVertices;
 
   // Update uniform buffer
   m_uniforms.time = static_cast<float>(glfwGetTime());
   m_queue.writeBuffer(m_uniformBuffer, offsetof(MyUniforms, time),
                       &m_uniforms.time, sizeof(MyUniforms::time));
+
 
   TextureView nextTexture = m_swapChain.getCurrentTextureView();
   if (!nextTexture) {
@@ -132,6 +134,7 @@ void Application::onFrame() {
   renderPassDesc.colorAttachmentCount = 1;
   renderPassDesc.colorAttachments = &renderPassColorAttachment;
 
+
   RenderPassDepthStencilAttachment depthStencilAttachment;
   depthStencilAttachment.view = m_depthTextureView;
   depthStencilAttachment.depthClearValue = 1.0f;
@@ -152,6 +155,7 @@ void Application::onFrame() {
 
   renderPassDesc.timestampWriteCount = 0;
   renderPassDesc.timestampWrites = nullptr;
+
   RenderPassEncoder renderPass = encoder.beginRenderPass(renderPassDesc);
 
   renderPass.setPipeline(m_pipeline);
@@ -323,6 +327,7 @@ bool Application::initWindowAndDevice() {
   requiredLimits.limits.maxComputeWorkgroupSizeZ = 1;
   requiredLimits.limits.maxComputeWorkgroupSizeY = 1;
   requiredLimits.limits.maxComputeInvocationsPerWorkgroup = 64;
+  requiredLimits.limits.maxStorageBufferBindingSize = 100000000000000;
 
   DeviceDescriptor deviceDesc;
   deviceDesc.label = "My Device";
