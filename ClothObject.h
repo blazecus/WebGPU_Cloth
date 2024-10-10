@@ -56,7 +56,7 @@ public:
     float scale = 1.0f;
     float massScale = 25.0f;
     float maxStretch = 1.3f;
-    float minStretch = 0.3f;
+    float minStretch = 0.1f;
 
     float sphereRadius = 0.3f;
     float spherePeriod = 150.0f;

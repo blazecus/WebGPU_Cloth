@@ -102,6 +102,7 @@ void Application::onFrame() {
   glfwPollEvents();
   updateDragInertia();
   updateLightingUniforms();
+  updateClothParameters();
 
   m_cloth.processFrame(m_device);
   m_vertexCount = m_cloth.numVertices;
@@ -302,7 +303,7 @@ bool Application::initWindowAndDevice() {
   requiredLimits.limits.maxVertexAttributes = 6;
   //                                          ^ This was a 4
   requiredLimits.limits.maxVertexBuffers = 1;
-  requiredLimits.limits.maxBufferSize = 150000 * sizeof(VertexAttributes);
+  requiredLimits.limits.maxBufferSize = 600 * 600 * 6 * sizeof(VertexAttributes);
   requiredLimits.limits.maxVertexBufferArrayStride = sizeof(VertexAttributes);
   requiredLimits.limits.minStorageBufferOffsetAlignment =
       supportedLimits.limits.minStorageBufferOffsetAlignment;
@@ -717,6 +718,13 @@ void Application::updateLightingUniforms() {
   }
 }
 
+void Application::updateClothParameters() {
+  if(m_clothParametersChanged){
+    m_cloth.initiateNewCloth(m_clothParams, m_device);
+    m_clothParametersChanged = false;
+  }
+}
+
 bool Application::initBindGroupLayout() {
   std::vector<BindGroupLayoutEntry> bindingLayoutEntries(5, Default);
   //                                                     ^ This was a 4
@@ -876,6 +884,39 @@ void Application::updateGui(RenderPassEncoder renderPass) {
   ImGui::NewFrame();
 
   // Build our UI
+
+  {
+    bool changed = false;
+    ImGui::Begin("cloth");
+    changed = ImGui::SliderInt("X Particle Count", &m_clothParams.width, 1, 600) ||
+              changed;
+    changed = ImGui::SliderInt("Y Particle Count", &m_clothParams.height, 1, 600) ||
+              changed;
+    
+    changed = ImGui::SliderFloat("Float scale", &m_clothParams.scale, 0.1f, 10.0f) ||
+              changed;
+
+    changed = ImGui::SliderFloat("Particle mass", &m_clothParams.massScale, 10.0f, 100.0f) ||
+              changed;
+    changed = ImGui::SliderFloat("Maximum stretch ratio", &m_clothParams.maxStretch, 1.0f, 2.0f) ||
+              changed;
+    changed = ImGui::SliderFloat("Reverse stretch ratio", &m_clothParams.minStretch, 0.0f, 0.5f) ||
+              changed;
+
+    changed = ImGui::SliderFloat("Sphere radius", &m_clothParams.sphereRadius, 0.1f, 1.0f) ||
+              changed;
+          
+    changed = ImGui::SliderFloat("Sphere loop period", &m_clothParams.spherePeriod, 20.0f, 300.0f) ||
+              changed;
+
+    changed = ImGui::SliderFloat("deltaT", &m_clothParams.deltaT, 0.0015f, 0.02f) ||
+              changed;
+
+
+    ImGui::End();
+    m_clothParametersChanged = changed;
+  }
+
   {
     bool changed = false;
     ImGui::Begin("Lighting");

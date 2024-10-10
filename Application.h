@@ -57,6 +57,7 @@ private:
   bool initLightingUniforms();
   void terminateLightingUniforms();
   void updateLightingUniforms();
+  void updateClothParameters();
 
   bool initBindGroupLayout();
   void terminateBindGroupLayout();
@@ -176,6 +177,7 @@ private:
   wgpu::Buffer m_lightingUniformBuffer = nullptr;
   LightingUniforms m_lightingUniforms;
   bool m_lightingUniformsChanged = true;
+  bool m_clothParametersChanged = true;
 
   // Bind Group Layout
   wgpu::BindGroupLayout m_bindGroupLayout = nullptr;

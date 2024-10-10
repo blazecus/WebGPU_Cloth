@@ -82,16 +82,24 @@ void ClothObject::updateParameters(ClothParameters &p) {
 void ClothObject::fillBuffer(wgpu::Device &device) {
   std::vector<ClothParticle> particleData;
   std::vector<ClothParticle> particleData2;
-  for (int y = 0; y < parameters.height; y++) {
-    for (int x = 0; x < parameters.width; x++) {
+  float offsetX = particleDist / 2.0f;
+  if(parameters.width % 2 == 1){
+    offsetX = 0;
+  } 
+  float offsetY = particleDist / 2.0f;
+  if(parameters.height % 2 == 1){
+    offsetY = 0;
+  } 
+  for (int y = -(parameters.height) / 2; y < (parameters.height + 1) / 2; y++) {
+    for (int x = -(parameters.width) / 2; x < (parameters.width + 1) / 2; x++) {
       ClothParticle particle;
-      particle.position = vec3(x * particleDist - parameters.scale / 2.0f, y * particleDist - parameters.scale / 2.0f, 0.0f);
+      particle.position = vec3(x * particleDist + offsetX, y * particleDist + offsetY, 0.0f);
       particle.velocity = vec3(0.0f, 0.0f, 0.0f);
 
       particleData.push_back(particle);
 
       ClothParticle particle2;
-      particle2.position = vec3(x * particleDist - parameters.scale / 2.0f, y * particleDist - parameters.scale / 2.0f, 0.0f);
+      particle2.position = vec3(x * particleDist + offsetX, y * particleDist + offsetY, 0.0f);
       particle2.velocity = vec3(0.0f, 0.0f, 0.0f);
 
       particleData2.push_back(particle2);
