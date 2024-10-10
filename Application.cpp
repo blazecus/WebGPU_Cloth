@@ -183,7 +183,9 @@ void Application::onFrame() {
   m_queue.submit(command);
   command.release();
 
-  m_swapChain.present();
+#ifndef __EMSCRIPTEN__
+    m_swapChain.present();
+#endif
 
 #ifdef WEBGPU_BACKEND_DAWN
   // Check for pending error callbacks
@@ -296,7 +298,14 @@ bool Application::initWindowAndDevice() {
   std::cout << "Got adapter: " << adapter << std::endl;
 
   SupportedLimits supportedLimits;
+
+  #ifdef __EMSCRIPTEN__
+  // Error in Chrome so we hardcode values:
+  supportedLimits.limits.minStorageBufferOffsetAlignment = 256;
+  supportedLimits.limits.minUniformBufferOffsetAlignment = 256;
+  #else
   adapter.getLimits(&supportedLimits);
+  #endif
 
   std::cout << "Requesting device..." << std::endl;
   RequiredLimits requiredLimits = Default;

@@ -15,7 +15,6 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # when distributing it.
 option(DEV_MODE "Set up development helper settings" ON)
 
-add_subdirectory(glfw)
 add_subdirectory(webgpu)
 add_subdirectory(glfw3webgpu)
 add_subdirectory(imgui)
@@ -68,3 +67,21 @@ if (MSVC)
 	# Disable warning C4244: conversion from 'int' to 'short', possible loss of data
 	target_compile_options(App PUBLIC /wd4244)
 endif (MSVC)
+
+#add_subdirectory(glfw)
+# At the end of the CMakeLists.txt
+if (EMSCRIPTEN)
+    # Add Emscripten-specific link options
+    target_link_options(App PRIVATE
+        -sUSE_WEBGPU # Handle WebGPU symbols
+        -sASYNCIFY # Required by WebGPU-C++
+    	--preload-file "${CMAKE_CURRENT_SOURCE_DIR}/resources"
+		-sALLOW_MEMORY_GROWTH
+    )
+    # Emscripten has built-in support for GLFW but requires the `-sUSE_GLFW=3` link option:
+    add_library(glfw INTERFACE)
+    target_link_options(glfw INTERFACE -sUSE_GLFW=3)
+	set_target_properties(App PROPERTIES SUFFIX ".html")
+else()
+    add_subdirectory(glfw)
+endif()
