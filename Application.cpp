@@ -910,14 +910,14 @@ void Application::updateGui(RenderPassEncoder renderPass) {
     changed = ImGui::SliderFloat("Float scale", &m_clothParams.scale, 0.1f, 10.0f) ||
               changed;
 
-    changed = ImGui::SliderFloat("Particle mass", &m_clothParams.massScale, 10.0f, 100.0f) ||
+    changed = ImGui::SliderFloat("Particle mass", &m_clothParams.massScale, 10.0f, 300.0f) ||
               changed;
     changed = ImGui::SliderFloat("Maximum stretch ratio", &m_clothParams.maxStretch, 1.0f, 2.0f) ||
               changed;
     changed = ImGui::SliderFloat("Reverse stretch ratio", &m_clothParams.minStretch, 0.0f, 0.5f) ||
               changed;
 
-    changed = ImGui::SliderFloat("Sphere radius", &m_clothParams.sphereRadius, 0.1f, 1.0f) ||
+    changed = ImGui::SliderFloat("Sphere radius", &m_clothParams.sphereRadius, 0.1f, 2.0f) ||
               changed;
           
     changed = ImGui::SliderFloat("Sphere loop period", &m_clothParams.spherePeriod, 20.0f, 300.0f) ||

@@ -54,8 +54,8 @@ public:
     int particlesPerGroup = 64;
 
     float scale = 1.0f;
-    float massScale = 25.0f;
-    float maxStretch = 1.3f;
+    float massScale = 100.0f;
+    float maxStretch = 1.1f;
     float minStretch = 0.1f;
 
     float sphereRadius = 0.3f;
