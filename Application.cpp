@@ -287,7 +287,7 @@ void Application::onScroll(double /* xoffset */, double yoffset) {
 // Private methods
 
 bool Application::initWindowAndDevice() {
-  m_instance = createInstance(InstanceDescriptor{});
+  m_instance = wgpuCreateInstance(nullptr);
   if (!m_instance) {
     std::cerr << "Could not initialize WebGPU!" << std::endl;
     return false;
@@ -352,7 +352,7 @@ bool Application::initWindowAndDevice() {
   requiredLimits.limits.maxComputeWorkgroupSizeZ = 64;
   requiredLimits.limits.maxComputeWorkgroupSizeY = 64;
   requiredLimits.limits.maxComputeInvocationsPerWorkgroup = 64;
-  requiredLimits.limits.maxStorageBufferBindingSize = 100000000000000;
+  requiredLimits.limits.maxStorageBufferBindingSize = 1000000000;
 
   DeviceDescriptor deviceDesc;
   deviceDesc.label = "My Device";
@@ -911,7 +911,7 @@ void Application::updateDragInertia() {
 bool Application::initGui() {
   // Setup Dear ImGui context
   IMGUI_CHECKVERSION();
-  ImGui::CreateContext();
+  ImGui::SetCurrentContext(ImGui::CreateContext());
   ImGui::GetIO();
 
   // Setup Platform/Renderer backends

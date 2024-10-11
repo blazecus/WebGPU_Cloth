@@ -22,8 +22,6 @@ using ClothVertex = ClothObject::ClothVertex;
 using ClothParticle = ClothObject::ClothParticle;
 using ClothUniforms = ClothObject::ClothUniforms;
 
-constexpr float PI = 3.14159265358979323846f;
-
 void ClothObject::initiateNewCloth(ClothParameters &p, wgpu::Device &device) {
   updateParameters(p);
   initBuffers(device);
