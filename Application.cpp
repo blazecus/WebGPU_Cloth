@@ -92,7 +92,6 @@ bool Application::onInit() {
   if (!initGui())
     return false;
 
-  std::cout << "cloth check" << std::endl;
   m_clothParams = ClothParameters();
   m_cloth.initiateNewCloth(m_clothParams, m_device);
   return true;
@@ -877,7 +876,13 @@ bool Application::initGui() {
 
   // Setup Platform/Renderer backends
   ImGui_ImplGlfw_InitForOther(m_window, true);
-  ImGui_ImplWGPU_Init(m_device, 3, m_swapChainFormat, m_depthTextureFormat);
+  ImGui_ImplWGPU_InitInfo init_info;
+	init_info.Device = m_device;
+	init_info.RenderTargetFormat = m_swapChainFormat;
+  init_info.DepthStencilFormat = m_depthTextureFormat;
+  init_info.NumFramesInFlight = 3;
+	ImGui_ImplWGPU_Init(&init_info);
+  //ImGui_ImplWGPU_Init(m_device, 3, m_swapChainFormat, m_depthTextureFormat);
   return true;
 }
 
