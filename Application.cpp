@@ -112,7 +112,24 @@ void Application::onFrame() {
                       &m_uniforms.time, sizeof(MyUniforms::time));
 
 
-  TextureView nextTexture = m_swapChain.getCurrentTextureView();
+  //TextureView nextTexture = m_swapChain.getCurrentTextureView();
+  SurfaceTexture surfaceTexture;
+  m_surface.getCurrentTexture(&surfaceTexture);
+  
+  Texture texture = surfaceTexture.texture;
+
+	// Create a view for this surface texture
+	TextureViewDescriptor viewDescriptor;
+	viewDescriptor.label = "Surface texture view";
+	viewDescriptor.format = texture.getFormat();
+	viewDescriptor.dimension = TextureViewDimension::_2D;
+	viewDescriptor.baseMipLevel = 0;
+	viewDescriptor.mipLevelCount = 1;
+	viewDescriptor.baseArrayLayer = 0;
+	viewDescriptor.arrayLayerCount = 1;
+	viewDescriptor.aspect = TextureAspect::All;
+	TextureView nextTexture = texture.createView(viewDescriptor);
+
   if (!nextTexture) {
     std::cerr << "Cannot acquire next swap chain texture" << std::endl;
     return;
@@ -152,7 +169,6 @@ void Application::onFrame() {
 
   renderPassDesc.depthStencilAttachment = &depthStencilAttachment;
 
-  renderPassDesc.timestampWriteCount = 0;
   renderPassDesc.timestampWrites = nullptr;
 
   RenderPassEncoder renderPass = encoder.beginRenderPass(renderPassDesc);
@@ -183,7 +199,8 @@ void Application::onFrame() {
   command.release();
 
 #ifndef __EMSCRIPTEN__
-    m_swapChain.present();
+    //m_swapChain.present();
+    m_surface.present();
 #endif
 
 #ifdef WEBGPU_BACKEND_DAWN
@@ -270,7 +287,7 @@ void Application::onScroll(double /* xoffset */, double yoffset) {
 // Private methods
 
 bool Application::initWindowAndDevice() {
-  m_instance = createInstance(InstanceDescriptor{});
+  m_instance = wgpuCreateInstance(nullptr);
   if (!m_instance) {
     std::cerr << "Could not initialize WebGPU!" << std::endl;
     return false;
@@ -335,11 +352,11 @@ bool Application::initWindowAndDevice() {
   requiredLimits.limits.maxComputeWorkgroupSizeZ = 64;
   requiredLimits.limits.maxComputeWorkgroupSizeY = 64;
   requiredLimits.limits.maxComputeInvocationsPerWorkgroup = 64;
-  requiredLimits.limits.maxStorageBufferBindingSize = 100000000000000;
+  requiredLimits.limits.maxStorageBufferBindingSize = 1000000000;
 
   DeviceDescriptor deviceDesc;
   deviceDesc.label = "My Device";
-  deviceDesc.requiredFeaturesCount = 0;
+  deviceDesc.requiredFeatureCount = 0;
   deviceDesc.requiredLimits = &requiredLimits;
   deviceDesc.defaultQueue.label = "The default queue";
   m_device = adapter.requestDevice(deviceDesc);
@@ -409,10 +426,11 @@ void Application::terminateWindowAndDevice() {
 
 bool Application::initSwapChain() {
   // Get the current size of the window's framebuffer:
+  std::cout << "configuring surface..." << std::endl;
   int width, height;
   glfwGetFramebufferSize(m_window, &width, &height);
 
-  std::cout << "Creating swapchain..." << std::endl;
+  /*std::cout << "Creating swapchain..." << std::endl;
   SwapChainDescriptor swapChainDesc;
   swapChainDesc.width = static_cast<uint32_t>(width);
   swapChainDesc.height = static_cast<uint32_t>(height);
@@ -421,10 +439,32 @@ bool Application::initSwapChain() {
   swapChainDesc.presentMode = PresentMode::Fifo;
   m_swapChain = m_device.createSwapChain(m_surface, swapChainDesc);
   std::cout << "Swapchain: " << m_swapChain << std::endl;
-  return m_swapChain != nullptr;
+  return m_swapChain != nullptr;*/
+  SurfaceConfiguration config = {};
+	
+	// Configuration of the textures created for the underlying swap chain
+	config.width = static_cast<uint32_t>(width);
+	config.height = static_cast<uint32_t>(height);
+	config.usage = TextureUsage::RenderAttachment;
+	config.format = m_swapChainFormat;
+
+	// And we do not need any particular view format:
+	config.viewFormatCount = 1;
+	config.viewFormats = (WGPUTextureFormat *) &m_swapChainFormat;
+	config.device = m_device;
+	config.presentMode = PresentMode::Fifo;
+	config.alphaMode = CompositeAlphaMode::Auto;
+
+  std::cout << "device: " <<std::endl;
+  std::cout << m_device << std::endl;
+	m_surface.configure(config);
+  std::cout << "done configuring surface..." << std::endl;
+  return true;
 }
 
-void Application::terminateSwapChain() { m_swapChain.release(); }
+void Application::terminateSwapChain() { 
+  //m_swapChain.release();
+   }
 
 bool Application::initDepthBuffer() {
   // Get the current size of the window's framebuffer:
@@ -871,7 +911,7 @@ void Application::updateDragInertia() {
 bool Application::initGui() {
   // Setup Dear ImGui context
   IMGUI_CHECKVERSION();
-  ImGui::CreateContext();
+  ImGui::SetCurrentContext(ImGui::CreateContext());
   ImGui::GetIO();
 
   // Setup Platform/Renderer backends

@@ -149,7 +149,7 @@ private:
   std::unique_ptr<wgpu::ErrorCallback> m_errorCallbackHandle;
 
   // Swap Chain
-  wgpu::SwapChain m_swapChain = nullptr;
+  //wgpu::SwapChain m_swapChain = nullptr;
 
   // Depth Buffer
   wgpu::TextureFormat m_depthTextureFormat = wgpu::TextureFormat::Depth24Plus;

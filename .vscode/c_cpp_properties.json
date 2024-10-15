@@ -11,7 +11,8 @@
                 "${workspaceFolder}/glfw",
                 "${workspaceFolder}/glfw3webgpu",
                 "${workspaceFolder}/build",
-                "${workspaceFolder}/build/**"
+                "${workspaceFolder}/build/**",
+                "${workspaceFolder}/build/_deps/"
             ],
             "defines": [
                 "_DEBUG",

@@ -9,7 +9,7 @@
         "vector": "cpp",
         "any": "cpp"
     },
-    "C_Cpp.default.compilerPath": "",
+    "C_Cpp.default.compilerPath": "/usr/bin/clang-14",
     "cmake.cpptools.compilerPath": "cl.exe",
     "Lua.workspace.library": []
 }
