@@ -48,9 +48,6 @@ private:
   bool initTextures();
   void terminateTextures();
 
-  bool initGeometry();
-  void terminateGeometry();
-
   bool initUniforms();
   void terminateUniforms();
 
@@ -148,9 +145,6 @@ private:
   // Keep the error callback alive
   std::unique_ptr<wgpu::ErrorCallback> m_errorCallbackHandle;
 
-  // Swap Chain
-  //wgpu::SwapChain m_swapChain = nullptr;
-
   // Depth Buffer
   wgpu::TextureFormat m_depthTextureFormat = wgpu::TextureFormat::Depth24Plus;
   wgpu::Texture m_depthTexture = nullptr;
@@ -168,7 +162,6 @@ private:
   wgpu::TextureView m_normalTextureView = nullptr;
 
   // Geometry
-  // wgpu::Buffer m_vertexBuffer = nullptr;
   int m_vertexCount = 0;
 
   // Uniforms
@@ -185,7 +178,9 @@ private:
   // Bind Group
   wgpu::BindGroup m_bindGroup = nullptr;
 
+  // cloth objects managed here
   ClothObject m_cloth;
+  // this structure is adjusted in the live gui
   ClothParameters m_clothParams;
 
   CameraState m_cameraState;

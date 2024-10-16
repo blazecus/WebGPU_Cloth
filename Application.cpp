@@ -81,8 +81,6 @@ bool Application::onInit() {
     return false;
   if (!initTextures())
     return false;
-  // if (!initGeometry())
-  //   return false;
   if (!initUniforms())
     return false;
   if (!initLightingUniforms())
@@ -92,6 +90,7 @@ bool Application::onInit() {
   if (!initGui())
     return false;
 
+  // init everything in cloth object
   m_clothParams = ClothParameters();
   m_cloth.initiateNewCloth(m_clothParams, m_device);
   return true;
@@ -101,8 +100,10 @@ void Application::onFrame() {
   glfwPollEvents();
   updateDragInertia();
   updateLightingUniforms();
+  // check for cloth parameters updates
   updateClothParameters();
 
+  // run cloth simulation - get next vertex buffer
   m_cloth.processFrame(m_device);
   m_vertexCount = m_cloth.numVertices;
 
@@ -111,24 +112,23 @@ void Application::onFrame() {
   m_queue.writeBuffer(m_uniformBuffer, offsetof(MyUniforms, time),
                       &m_uniforms.time, sizeof(MyUniforms::time));
 
-
-  //TextureView nextTexture = m_swapChain.getCurrentTextureView();
+  // TextureView nextTexture = m_swapChain.getCurrentTextureView();
   SurfaceTexture surfaceTexture;
   m_surface.getCurrentTexture(&surfaceTexture);
-  
+
   Texture texture = surfaceTexture.texture;
 
-	// Create a view for this surface texture
-	TextureViewDescriptor viewDescriptor;
-	viewDescriptor.label = "Surface texture view";
-	viewDescriptor.format = texture.getFormat();
-	viewDescriptor.dimension = TextureViewDimension::_2D;
-	viewDescriptor.baseMipLevel = 0;
-	viewDescriptor.mipLevelCount = 1;
-	viewDescriptor.baseArrayLayer = 0;
-	viewDescriptor.arrayLayerCount = 1;
-	viewDescriptor.aspect = TextureAspect::All;
-	TextureView nextTexture = texture.createView(viewDescriptor);
+  // Create a view for this surface texture
+  TextureViewDescriptor viewDescriptor;
+  viewDescriptor.label = "Surface texture view";
+  viewDescriptor.format = texture.getFormat();
+  viewDescriptor.dimension = TextureViewDimension::_2D;
+  viewDescriptor.baseMipLevel = 0;
+  viewDescriptor.mipLevelCount = 1;
+  viewDescriptor.baseArrayLayer = 0;
+  viewDescriptor.arrayLayerCount = 1;
+  viewDescriptor.aspect = TextureAspect::All;
+  TextureView nextTexture = texture.createView(viewDescriptor);
 
   if (!nextTexture) {
     std::cerr << "Cannot acquire next swap chain texture" << std::endl;
@@ -150,6 +150,10 @@ void Application::onFrame() {
   renderPassDesc.colorAttachmentCount = 1;
   renderPassDesc.colorAttachments = &renderPassColorAttachment;
 
+  // necessary for emscripten compatibility:
+#ifndef WEBGPU_BACKEND_WGPU
+  renderPassColorAttachment.depthSlice = WGPU_DEPTH_SLICE_UNDEFINED;
+#endif
 
   RenderPassDepthStencilAttachment depthStencilAttachment;
   depthStencilAttachment.view = m_depthTextureView;
@@ -199,8 +203,8 @@ void Application::onFrame() {
   command.release();
 
 #ifndef __EMSCRIPTEN__
-    //m_swapChain.present();
-    m_surface.present();
+  // m_swapChain.present();
+  m_surface.present();
 #endif
 
 #ifdef WEBGPU_BACKEND_DAWN
@@ -214,7 +218,6 @@ void Application::onFinish() {
   terminateBindGroup();
   terminateLightingUniforms();
   terminateUniforms();
-  terminateGeometry();
   terminateTextures();
   terminateRenderPipeline();
   terminateBindGroupLayout();
@@ -315,20 +318,21 @@ bool Application::initWindowAndDevice() {
 
   SupportedLimits supportedLimits;
 
-  #ifdef __EMSCRIPTEN__
+#ifdef __EMSCRIPTEN__
   // Error in Chrome so we hardcode values:
   supportedLimits.limits.minStorageBufferOffsetAlignment = 256;
   supportedLimits.limits.minUniformBufferOffsetAlignment = 256;
-  #else
+#else
   adapter.getLimits(&supportedLimits);
-  #endif
+#endif
 
   std::cout << "Requesting device..." << std::endl;
   RequiredLimits requiredLimits = Default;
   requiredLimits.limits.maxVertexAttributes = 6;
   //                                          ^ This was a 4
   requiredLimits.limits.maxVertexBuffers = 1;
-  requiredLimits.limits.maxBufferSize = 600 * 600 * 6 * sizeof(VertexAttributes);
+  requiredLimits.limits.maxBufferSize =
+      600 * 600 * 6 * sizeof(VertexAttributes);
   requiredLimits.limits.maxVertexBufferArrayStride = sizeof(VertexAttributes);
   requiredLimits.limits.minStorageBufferOffsetAlignment =
       supportedLimits.limits.minStorageBufferOffsetAlignment;
@@ -430,41 +434,28 @@ bool Application::initSwapChain() {
   int width, height;
   glfwGetFramebufferSize(m_window, &width, &height);
 
-  /*std::cout << "Creating swapchain..." << std::endl;
-  SwapChainDescriptor swapChainDesc;
-  swapChainDesc.width = static_cast<uint32_t>(width);
-  swapChainDesc.height = static_cast<uint32_t>(height);
-  swapChainDesc.usage = TextureUsage::RenderAttachment;
-  swapChainDesc.format = m_swapChainFormat;
-  swapChainDesc.presentMode = PresentMode::Fifo;
-  m_swapChain = m_device.createSwapChain(m_surface, swapChainDesc);
-  std::cout << "Swapchain: " << m_swapChain << std::endl;
-  return m_swapChain != nullptr;*/
   SurfaceConfiguration config = {};
-	
-	// Configuration of the textures created for the underlying swap chain
-	config.width = static_cast<uint32_t>(width);
-	config.height = static_cast<uint32_t>(height);
-	config.usage = TextureUsage::RenderAttachment;
-	config.format = m_swapChainFormat;
 
-	// And we do not need any particular view format:
-	config.viewFormatCount = 1;
-	config.viewFormats = (WGPUTextureFormat *) &m_swapChainFormat;
-	config.device = m_device;
-	config.presentMode = PresentMode::Fifo;
-	config.alphaMode = CompositeAlphaMode::Auto;
+  // Configuration of the textures created for the underlying swap chain
+  config.width = static_cast<uint32_t>(width);
+  config.height = static_cast<uint32_t>(height);
+  config.usage = TextureUsage::RenderAttachment;
+  config.format = m_swapChainFormat;
 
-  std::cout << "device: " <<std::endl;
-  std::cout << m_device << std::endl;
-	m_surface.configure(config);
-  std::cout << "done configuring surface..." << std::endl;
+  // And we do not need any particular view format:
+  config.viewFormatCount = 0;
+  config.viewFormats = nullptr;
+  config.device = m_device;
+  config.presentMode = PresentMode::Fifo;
+  config.alphaMode = CompositeAlphaMode::Auto;
+
+  m_surface.configure(config);
   return true;
 }
 
-void Application::terminateSwapChain() { 
-  //m_swapChain.release();
-   }
+void Application::terminateSwapChain() {
+  // m_swapChain.release();
+}
 
 bool Application::initDepthBuffer() {
   // Get the current size of the window's framebuffer:
@@ -670,41 +661,6 @@ void Application::terminateTextures() {
   m_sampler.release();
 }
 
-bool Application::initGeometry() {
-  // Load mesh data from OBJ file
-  return true;
-
-  /*
-  std::vector<VertexAttributes> vertexData;
-  bool success = ResourceManager::loadGeometryFromObj(
-      RESOURCE_DIR "/cylinder.obj", vertexData);
-  // bool success = ResourceManager::loadGeometryFromObj(RESOURCE_DIR
-  // "/fourareen.obj", vertexData);
-  if (!success) {
-    std::cerr << "Could not load geometry!" << std::endl;
-    return false;
-  }
-
-  // Create vertex buffer
-  BufferDescriptor bufferDesc;
-  bufferDesc.size = vertexData.size() * sizeof(VertexAttributes);
-  bufferDesc.usage = BufferUsage::CopyDst | BufferUsage::Vertex;
-  bufferDesc.mappedAtCreation = false;
-  m_vertexBuffer = m_device.createBuffer(bufferDesc);
-  m_queue.writeBuffer(m_vertexBuffer, 0, vertexData.data(), bufferDesc.size);
-
-  m_vertexCount = static_cast<int>(vertexData.size());
-
-  return m_vertexBuffer != nullptr;
-  */
-}
-
-void Application::terminateGeometry() {
-  /*m_vertexBuffer.destroy();
-  m_vertexBuffer.release();
-  m_vertexCount = 0;*/
-}
-
 bool Application::initUniforms() {
   // Create uniform buffer
   BufferDescriptor bufferDesc;
@@ -767,7 +723,9 @@ void Application::updateLightingUniforms() {
 }
 
 void Application::updateClothParameters() {
-  if(m_clothParametersChanged){
+  // checks if parameters need to be updated from gui, and updates them if so,
+  // creating a new cloth
+  if (m_clothParametersChanged) {
     m_cloth.initiateNewCloth(m_clothParams, m_device);
     m_clothParametersChanged = false;
   }
@@ -911,18 +869,18 @@ void Application::updateDragInertia() {
 bool Application::initGui() {
   // Setup Dear ImGui context
   IMGUI_CHECKVERSION();
-  ImGui::SetCurrentContext(ImGui::CreateContext());
+  ImGui::CreateContext();
   ImGui::GetIO();
 
   // Setup Platform/Renderer backends
   ImGui_ImplGlfw_InitForOther(m_window, true);
   ImGui_ImplWGPU_InitInfo init_info;
-	init_info.Device = m_device;
-	init_info.RenderTargetFormat = m_swapChainFormat;
+  init_info.Device = m_device;
+  init_info.RenderTargetFormat = m_swapChainFormat;
   init_info.DepthStencilFormat = m_depthTextureFormat;
   init_info.NumFramesInFlight = 3;
-	ImGui_ImplWGPU_Init(&init_info);
-  //ImGui_ImplWGPU_Init(m_device, 3, m_swapChainFormat, m_depthTextureFormat);
+  ImGui_ImplWGPU_Init(&init_info);
+  // ImGui_ImplWGPU_Init(m_device, 3, m_swapChainFormat, m_depthTextureFormat);
   return true;
 }
 
@@ -939,33 +897,42 @@ void Application::updateGui(RenderPassEncoder renderPass) {
 
   // Build our UI
 
+  // cloth ui
   {
     bool changed = false;
     ImGui::Begin("cloth");
-    changed = ImGui::SliderInt("X Particle Count", &m_clothParams.width, 1, 600) ||
+    changed =
+        ImGui::SliderInt("X Particle Count", &m_clothParams.width, 1, 600) ||
+        changed;
+    changed =
+        ImGui::SliderInt("Y Particle Count", &m_clothParams.height, 1, 600) ||
+        changed;
+
+    changed =
+        ImGui::SliderFloat("Float scale", &m_clothParams.scale, 0.1f, 10.0f) ||
+        changed;
+
+    changed = ImGui::SliderFloat("Particle mass", &m_clothParams.massScale,
+                                 10.0f, 300.0f) ||
               changed;
-    changed = ImGui::SliderInt("Y Particle Count", &m_clothParams.height, 1, 600) ||
+    changed = ImGui::SliderFloat("Maximum stretch ratio",
+                                 &m_clothParams.maxStretch, 1.0f, 2.0f) ||
               changed;
-    
-    changed = ImGui::SliderFloat("Float scale", &m_clothParams.scale, 0.1f, 10.0f) ||
+    changed = ImGui::SliderFloat("Reverse stretch ratio",
+                                 &m_clothParams.minStretch, 0.0f, 0.5f) ||
               changed;
 
-    changed = ImGui::SliderFloat("Particle mass", &m_clothParams.massScale, 10.0f, 300.0f) ||
-              changed;
-    changed = ImGui::SliderFloat("Maximum stretch ratio", &m_clothParams.maxStretch, 1.0f, 2.0f) ||
-              changed;
-    changed = ImGui::SliderFloat("Reverse stretch ratio", &m_clothParams.minStretch, 0.0f, 0.5f) ||
+    changed = ImGui::SliderFloat("Sphere radius", &m_clothParams.sphereRadius,
+                                 0.1f, 2.0f) ||
               changed;
 
-    changed = ImGui::SliderFloat("Sphere radius", &m_clothParams.sphereRadius, 0.1f, 2.0f) ||
-              changed;
-          
-    changed = ImGui::SliderFloat("Sphere loop period", &m_clothParams.spherePeriod, 20.0f, 300.0f) ||
+    changed = ImGui::SliderFloat("Sphere loop period",
+                                 &m_clothParams.spherePeriod, 20.0f, 300.0f) ||
               changed;
 
-    changed = ImGui::SliderFloat("deltaT", &m_clothParams.deltaT, 0.0015f, 0.02f) ||
-              changed;
-
+    changed =
+        ImGui::SliderFloat("deltaT", &m_clothParams.deltaT, 0.0015f, 0.02f) ||
+        changed;
 
     ImGui::End();
     m_clothParametersChanged = changed;

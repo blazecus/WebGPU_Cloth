@@ -23,28 +23,38 @@ using ClothParticle = ClothObject::ClothParticle;
 using ClothUniforms = ClothObject::ClothUniforms;
 
 void ClothObject::initiateNewCloth(ClothParameters &p, wgpu::Device &device) {
+  // initiation function
+  // set cloth parameters
   updateParameters(p);
+  // init functions
   initBuffers(device);
   initBindGroupLayout(device);
   initComputePipeline(device);
   initBindGroup(device);
 
+  // fill in uniform and particle buffers
   updateUniforms(device);
   fillBuffer(device);
 }
 
 void ClothObject::processFrame(wgpu::Device &device) {
+  // update function that runs every frame
+
   frame += 1;
   currentT += parameters.deltaT;
 
+  // uniform update happens every frame to update time
   updateUniforms(device);
   // repeat bindgroup inititation to switch which buffer is input and output
   initBindGroup(device);
 
+  // simulation step
   computePass(device);
 }
 
 void ClothObject::updateParameters(ClothParameters &p) {
+  // fill in new parameters, calculate extra determined parameters, and fill in
+  // uniform datastructure (but not buffer)
   parameters = p;
 
   numParticles = parameters.width * parameters.height;
@@ -57,7 +67,7 @@ void ClothObject::updateParameters(ClothParameters &p) {
   currentT = 0;
   frame = 0;
 
-  // update
+  // update uniforms
   uniforms.width = (float)parameters.width;
   uniforms.height = (float)parameters.height;
 
@@ -78,31 +88,43 @@ void ClothObject::updateParameters(ClothParameters &p) {
 }
 
 void ClothObject::fillBuffer(wgpu::Device &device) {
+  // fill in the particle buffers with initial particle values based on width
+  // and height and particleDist
+
   std::vector<ClothParticle> particleData;
   std::vector<ClothParticle> particleData2;
+
+  // center grid on 0,0
   float offsetX = particleDist / 2.0f;
-  if(parameters.width % 2 == 1){
+  if (parameters.width % 2 == 1) {
     offsetX = 0;
-  } 
+  }
   float offsetY = particleDist / 2.0f;
-  if(parameters.height % 2 == 1){
+  if (parameters.height % 2 == 1) {
     offsetY = 0;
-  } 
+  }
+
+  // grid initialization
   for (int y = -(parameters.height) / 2; y < (parameters.height + 1) / 2; y++) {
     for (int x = -(parameters.width) / 2; x < (parameters.width + 1) / 2; x++) {
       ClothParticle particle;
-      particle.position = vec3(x * particleDist + offsetX, y * particleDist + offsetY, 0.0f);
+      particle.position =
+          vec3(x * particleDist + offsetX, y * particleDist + offsetY, 0.0f);
       particle.velocity = vec3(0.0f, 0.0f, 0.0f);
 
       particleData.push_back(particle);
 
+      // second particle buffer is copied
       ClothParticle particle2;
-      particle2.position = vec3(x * particleDist + offsetX, y * particleDist + offsetY, 0.0f);
+      particle2.position =
+          vec3(x * particleDist + offsetX, y * particleDist + offsetY, 0.0f);
       particle2.velocity = vec3(0.0f, 0.0f, 0.0f);
 
       particleData2.push_back(particle2);
     }
   }
+
+  // write to buffers
   device.getQueue().writeBuffer(particleBuffers[0], 0, particleData.data(),
                                 numParticles * sizeof(ClothParticle));
   device.getQueue().writeBuffer(particleBuffers[1], 0, particleData2.data(),
@@ -110,6 +132,8 @@ void ClothObject::fillBuffer(wgpu::Device &device) {
 }
 
 void ClothObject::initBuffers(wgpu::Device &device) {
+  // initialize buffer objects
+  //
   // Create input/output buffers
   BufferDescriptor bufferDesc;
   bufferDesc.mappedAtCreation = false;
@@ -121,10 +145,12 @@ void ClothObject::initBuffers(wgpu::Device &device) {
   // Create vertex buffer
   BufferDescriptor vbufferDesc;
   vbufferDesc.size = numVertices * sizeof(ClothVertex);
-  vbufferDesc.usage = BufferUsage::CopyDst | BufferUsage::Storage | BufferUsage::Vertex;
+  vbufferDesc.usage =
+      BufferUsage::CopyDst | BufferUsage::Storage | BufferUsage::Vertex;
   vbufferDesc.mappedAtCreation = false;
   m_vertexBuffer = device.createBuffer(vbufferDesc);
 
+  // create uniform buffer
   BufferDescriptor ubufferDesc;
   ubufferDesc.size = sizeof(ClothUniforms);
   ubufferDesc.usage = BufferUsage::CopyDst | BufferUsage::Uniform;
@@ -133,8 +159,9 @@ void ClothObject::initBuffers(wgpu::Device &device) {
 }
 
 void ClothObject::initBindGroupLayout(wgpu::Device &device) {
+  // initalize bind group layouts from descriptions
 
-  // compute group
+  // group 0 is dedicated to particle simulation
   std::vector<BindGroupLayoutEntry> bindings(3, Default);
 
   // The uniform buffer binding
@@ -153,18 +180,20 @@ void ClothObject::initBindGroupLayout(wgpu::Device &device) {
   bindings[2].buffer.type = BufferBindingType::Storage;
   bindings[2].visibility = ShaderStage::Compute;
 
+  // bind group 0 init
   BindGroupLayoutDescriptor bindGroupLayoutDesc;
   bindGroupLayoutDesc.entryCount = (uint32_t)bindings.size();
   bindGroupLayoutDesc.entries = bindings.data();
   m_bindGroupLayouts[0] = device.createBindGroupLayout(bindGroupLayoutDesc);
 
-  // vertex output group
+  // group 1 is dedicated to just the vertex buffer
 
   std::vector<BindGroupLayoutEntry> vBindings(1, Default);
   vBindings[0].binding = 0;
   vBindings[0].visibility = ShaderStage::Compute;
   vBindings[0].buffer.type = BufferBindingType::Storage;
 
+  // bind group 1 init
   BindGroupLayoutDescriptor vertexBindGroupLayoutDesc;
   vertexBindGroupLayoutDesc.entryCount = (uint32_t)vBindings.size();
   vertexBindGroupLayoutDesc.entries = vBindings.data();
@@ -173,10 +202,11 @@ void ClothObject::initBindGroupLayout(wgpu::Device &device) {
 }
 
 void ClothObject::updateUniforms(wgpu::Device &device) {
+  // updates uniforms and fills the buffer with the new uniform values
+
   uniforms.currentT = currentT;
 
-  // uniforms.sphereX = 0.0f;
-  // uniforms.sphereY = 0.0f;
+  // calculate sphere position
   float sphere_period = (fmod(currentT, parameters.spherePeriod * 2.0f) -
                          parameters.spherePeriod) /
                         parameters.spherePeriod;
@@ -184,12 +214,16 @@ void ClothObject::updateUniforms(wgpu::Device &device) {
   uniforms.sphereZ = parameters.sphereRange *
                      (1.0f + sphere_sign * (sphere_period * 2.0f) - 2.0f);
 
+  // write to buffer
   device.getQueue().writeBuffer(m_uniformBuffer, 0, &uniforms,
                                 sizeof(ClothUniforms));
 }
 
 void ClothObject::initComputePipeline(wgpu::Device &device) {
+  // describe and init compute pass pipeline
+  // 2 separate passes are described
 
+  // shader loading
   ShaderModule computeShaderModule =
       ResourceManager::loadShaderModule(RESOURCE_DIR "/compute.wgsl", device);
 
@@ -200,7 +234,7 @@ void ClothObject::initComputePipeline(wgpu::Device &device) {
       (WGPUBindGroupLayout *)&m_bindGroupLayouts;
   m_pipelineLayout = device.createPipelineLayout(pipelineLayoutDesc);
 
-  // Create compute pipeline
+  // first pass - particle simulation
   ComputePipelineDescriptor computePass1;
   computePass1.compute.constantCount = 0;
   computePass1.compute.constants = nullptr;
@@ -209,6 +243,7 @@ void ClothObject::initComputePipeline(wgpu::Device &device) {
   computePass1.layout = m_pipelineLayout;
   m_pipeline = device.createComputePipeline(computePass1);
 
+  // second pass - particles to vertices
   ComputePipelineDescriptor computePass2;
   computePass2.compute.constantCount = 0;
   computePass2.compute.constants = nullptr;
@@ -219,14 +254,21 @@ void ClothObject::initComputePipeline(wgpu::Device &device) {
 }
 
 void ClothObject::initBindGroup(wgpu::Device &device) {
+  // describe and init bind groups
+
   // Create compute bind group
   std::vector<BindGroupEntry> entries(3, Default);
 
+  // group 0 - particle buffers
+
+  // uniform buffer
   entries[0].binding = 0;
   entries[0].buffer = m_uniformBuffer;
   entries[0].offset = 0;
   entries[0].size = sizeof(ClothUniforms);
 
+  // alternate input and output buffers based on odd and even frame counts
+  //
   // Input buffer
   entries[1].binding = 1;
   entries[1].buffer = particleBuffers[frame % 2];
@@ -239,12 +281,14 @@ void ClothObject::initBindGroup(wgpu::Device &device) {
   entries[2].offset = 0;
   entries[2].size = numParticles * sizeof(ClothParticle);
 
+  // write first group descriptor
   BindGroupDescriptor bindGroupDesc;
   bindGroupDesc.layout = m_bindGroupLayouts[0];
   bindGroupDesc.entryCount = (uint32_t)entries.size();
   bindGroupDesc.entries = (WGPUBindGroupEntry *)entries.data();
   m_bindGroup = device.createBindGroup(bindGroupDesc);
 
+  // group 1 - vertex buffer
   std::vector<BindGroupEntry> ventries(1, Default);
 
   ventries[0].binding = 0;
@@ -252,6 +296,7 @@ void ClothObject::initBindGroup(wgpu::Device &device) {
   ventries[0].offset = 0;
   ventries[0].size = numVertices * sizeof(ClothVertex);
 
+  // write second group descriptor
   BindGroupDescriptor vbindGroupDesc;
   bindGroupDesc.layout = m_bindGroupLayouts[1];
   bindGroupDesc.entryCount = (uint32_t)ventries.size();
@@ -260,12 +305,16 @@ void ClothObject::initBindGroup(wgpu::Device &device) {
 }
 
 void ClothObject::computePass(wgpu::Device &device) {
+  // runs the compute pass pipeline
+
+  // first, get encoder
   Queue queue = device.getQueue();
 
   CommandEncoderDescriptor encoderDesc = Default;
   encoderDesc.label = "compute pass encoder";
   CommandEncoder encoder = device.createCommandEncoder(encoderDesc);
 
+  // run the first compute pass
   ComputePassDescriptor computePassDesc;
   computePassDesc.timestampWrites = nullptr;
   computePassDesc.label = "compute pass 1";
@@ -282,6 +331,7 @@ void ClothObject::computePass(wgpu::Device &device) {
   computePass.dispatchWorkgroups(workgroupCount, 1, 1);
   computePass.end();
 
+  // run the second compute pass
   ComputePassDescriptor computePassDesc2;
   computePassDesc2.timestampWrites = nullptr;
   computePassDesc2.label = "compute pass 2";
@@ -298,6 +348,7 @@ void ClothObject::computePass(wgpu::Device &device) {
   computePass2.dispatchWorkgroups(workgroupCount2, 1, 1);
   computePass2.end();
 
+  // submit compute shader commands
   CommandBuffer commands = encoder.finish(CommandBufferDescriptor{});
   queue.submit(commands);
 }
@@ -305,6 +356,7 @@ void ClothObject::computePass(wgpu::Device &device) {
 // -------------- MEMORY TERMINATION ----------------------
 
 void ClothObject::terminateAll() {
+  // free members on termination
   terminateBindGroups();
   terminateUniforms();
   terminateComputePipeline();
@@ -313,27 +365,32 @@ void ClothObject::terminateAll() {
 }
 
 void ClothObject::terminateComputePipeline() {
+  // release pipelines
   m_pipeline.release();
   m_shaderModule.release();
 }
 
 void ClothObject::terminateBindGroups() {
+  // release bind groups
   m_bindGroup.release();
   m_vertexBindGroup.release();
 }
 
 void ClothObject::terminateBindGroupLayouts() {
+  // release bind group layouts
   for (wgpu::BindGroupLayout &layout : m_bindGroupLayouts) {
     layout.release();
   }
 }
 
 void ClothObject::terminateUniforms() {
+  // release uniform buffers
   m_uniformBuffer.destroy();
   m_uniformBuffer.release();
 }
 
 void ClothObject::terminateBuffers() {
+  // release particle and vertex buffers
   for (wgpu::Buffer &pbuffer : particleBuffers) {
     pbuffer.destroy();
     pbuffer.release();
