@@ -7,6 +7,7 @@ https://jackblazes.net/demos/cloth_demo/App.html
 To run the demo locally, simply run these commands:
 
 cmake . -B build
+
 cmake --build build
 
 Then run the resulting App/App.exe.
