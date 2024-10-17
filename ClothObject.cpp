@@ -78,6 +78,12 @@ void ClothObject::updateParameters(ClothParameters &p) {
   uniforms.maxStretch = parameters.maxStretch;
   uniforms.minStretch = parameters.minStretch;
 
+  uniforms.closeSpringStrength = parameters.closeSpringStrength;
+  uniforms.farSpringStrength = parameters.farSpringStrength;
+
+  uniforms.wind_strength = parameters.wind_strength;
+  uniforms.wind_dir = parameters.wind_dir;
+
   uniforms.sphereRadius = parameters.sphereRadius;
   uniforms.sphereX = 0;
   uniforms.sphereY = 0;

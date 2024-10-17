@@ -171,6 +171,7 @@ private:
   LightingUniforms m_lightingUniforms;
   bool m_lightingUniformsChanged = true;
   bool m_clothParametersChanged = true;
+  bool m_clothReset = true;
 
   // Bind Group Layout
   wgpu::BindGroupLayout m_bindGroupLayout = nullptr;

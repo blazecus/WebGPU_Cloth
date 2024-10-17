@@ -61,6 +61,11 @@ public:
     float massScale = 100.0f;
     float maxStretch = 1.1f;
     float minStretch = 0.1f;
+    float closeSpringStrength = 73.0f;
+    float farSpringStrength = 12.5f;
+
+    vec3 wind_dir = vec3(0.0f, 0.0f, 1.0f);
+    float wind_strength = 10.0f;
 
     float sphereRadius = 0.3f;
     float spherePeriod = 150.0f;
@@ -77,8 +82,13 @@ public:
     float particleMass;
     float particleScale;
 
+    float closeSpringStrength;
+    float farSpringStrength;
     float maxStretch;
     float minStretch;
+
+    // wind parameters
+    float wind_strength;
 
     float sphereRadius;
     float sphereX;
@@ -87,8 +97,8 @@ public:
 
     float deltaT;
     float currentT;
-    // three garbage floats to reach 128 block
-    vec3 garbage;
+    vec3 wind_dir;
+    float garbage1; // garbage for vec3
   };
 
   // data structure members

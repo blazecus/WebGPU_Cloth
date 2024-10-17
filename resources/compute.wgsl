@@ -20,8 +20,13 @@ struct SimParams {
   particleScale : f32,
 
   // spring constraints 
+  closeSpringStrength : f32,
+  farSpringStrength : f32,
   outSpringStretch : f32,
   inSpringStretch : f32,
+
+  //wind parameters
+  wind_strength : f32,
 
   // sphere size and movement
   sphereRadius : f32,
@@ -32,6 +37,7 @@ struct SimParams {
   // time uniforms
   deltaT : f32,
   currentT : f32,
+  wind_dir : vec3<f32>,
 }
 
 // uniform buffer
@@ -109,13 +115,8 @@ fn forces(index: u32, current_pos: vec3<f32>)->vec3<f32>{
   // gravity
   total_force.y -= 9.8 * params.particleMass; 
 
-
-  // wind - for now, just constant in a direction
-  //let t = params.currentT;
-  //let wind_dir = vec3(sin(cos(t * t * 5.0f)), cos(t * t * t + 5.0f), cos(sin(t))) * t;
-  //let wind_dir = vec3(sin(t * 0.25f), cos(t * 0.15f), sin(t * t * 0.015f));
-  //total_force += wind_dir  * 0.5f;
-  total_force.z += 0.0005f * params.particleScale;
+  // wind calculation
+  total_force += params.wind_dir * 0.0005f * params.particleScale * params.wind_strength;
 
   // lock top row of particles 
   var multiplier = 1.0f;
@@ -229,30 +230,85 @@ fn particle_to_vertex(@builtin(global_invocation_id) global_invocation_id: vec3<
   let row: u32 = cell / u32(i32(params.particleWidth - 1.0f));
   var cellIdx: u32 = cell + row;
 
+  // retrieve position from particle
+  // particle position is found by finding relative position in square, then triangle
   let square_pos: u32 = index % 6u;
+  let vIdx = cellIdx + triangle_pos_conversion(square_pos);
+  let vpos :vec3<f32> = particlesDst[vIdx].pos;
+
+  // choose normal calculation method - normals_by_average is smooth, whil normals_by_face shows each face more visibly
+  //let norm = normals_by_face(square_pos, cellIdx, vpos);
+  let norm = normals_by_average(vIdx, vpos);
+
+  // switch dimensions
+  let nv :vec3<f32> = vec3(vpos[2], vpos[0], vpos[1]);
+  let nn : vec3<f32> = vec3(norm[2], norm[0], norm[1]);
+  vertexOut[index] = Vertex(nv / (0.3f * params.particleScale), nn);
+}
+
+// method for generating normals by face - will produce the same normal for all 3 vertices of the same face
+fn normals_by_face(square_pos : u32, cellIdx : u32, vpos : vec3<f32>) -> vec3<f32>{
+  // check for which side of the square we are on - direction is reversed if on other side
   var add_to_lr: u32 = 0u;
   if(square_pos > 2u){
-    add_to_lr = u32(3);
+    add_to_lr = 3u;
   }
-  // here we find where the vertex is inside the triangle
+
+  // calculate normal from face edges 
   let left: u32 = ((square_pos + 2u) % 3u) + add_to_lr;
   let right: u32 = ((square_pos + 1u) % 3u) + add_to_lr;
 
   // backtracking to particle idx from triangle position 
   let lcellIdx = cellIdx + triangle_pos_conversion(left);
   let rcellIdx = cellIdx + triangle_pos_conversion(right);
-  cellIdx += triangle_pos_conversion(square_pos);
-
-  // retrieve position from particle
-  let vpos :vec3<f32> = particlesDst[cellIdx].pos;
-
-  // calculate normal from face edges 
+  
   let lvec :vec3<f32> = vpos - particlesDst[lcellIdx].pos;
   let rvec :vec3<f32> = vpos - particlesDst[rcellIdx].pos;
-  let norm = normalize(cross(lvec, rvec));
+  return normalize(cross(lvec, rvec));
+}
 
-  // switch dimensions
-  let nv :vec3<f32> = vec3(vpos[2], vpos[0], vpos[1]);
-  let nn : vec3<f32> = vec3(norm[2], norm[0], norm[1]);
-  vertexOut[index] = Vertex(nv / (0.3f * params.particleScale), nn);
+// get normal by averaging normals of all adjacent faces
+fn normals_by_average(cellIdx: u32, vpos: vec3<f32>) -> vec3<f32>{  
+  // get particle location
+  let width :i32= i32(params.particleWidth);
+  let height :i32= i32(params.particleHeight);
+
+  let x :i32 = i32(cellIdx) % width;
+  let y :i32 = i32(cellIdx) / width;
+
+  // get surrounding particle vectors to origin particle
+  var up_particle = vec3<f32>();
+  var down_particle = vec3<f32>();
+  var left_particle = vec3<f32>();
+  var right_particle = vec3<f32>();
+
+  if(y > 0){
+    up_particle = normalize(vpos - particlesDst[cellIdx - u32(width)].pos);
+  }
+  if(y < height - 1){
+    down_particle = normalize(vpos - particlesDst[cellIdx + u32(width)].pos);
+  }
+  if(x > 0){
+    left_particle = normalize(vpos - particlesDst[cellIdx - 1u].pos);
+  }
+  if(x < width - 1){
+    right_particle = normalize(vpos - particlesDst[cellIdx + 1u].pos);
+  }
+
+  // average normals from surrounding existing faces, weighted by the angle of the corresponding "face" 
+  var total_norm = vec3<f32>();
+  if(y > 0 && x < width - 1){
+    total_norm += cross(up_particle, right_particle) * acos(dot(up_particle, right_particle));
+  }
+  if(y < height - 1 && x < width - 1){
+    total_norm += cross(right_particle, down_particle) * acos(dot(right_particle, down_particle));
+  }
+  if(y < height - 1 && x > 0){
+    total_norm += cross(down_particle, left_particle) * acos(dot(down_particle, left_particle));
+  }
+  if(y > 0 && x > 0){
+    total_norm += cross(left_particle, up_particle) * acos(dot(left_particle, up_particle));
+  }
+  
+  return normalize(total_norm);
 }

@@ -342,7 +342,7 @@ bool Application::initWindowAndDevice() {
   //                                                    ^^ This was a 11
   requiredLimits.limits.maxBindGroups = 2;
   requiredLimits.limits.maxUniformBuffersPerShaderStage = 2;
-  requiredLimits.limits.maxUniformBufferBindingSize = 16 * 4 * sizeof(float);
+  requiredLimits.limits.maxUniformBufferBindingSize = 16 * 8 * sizeof(float);
   // Allow textures up to 2K
   requiredLimits.limits.maxTextureDimension1D = 2048;
   requiredLimits.limits.maxTextureDimension2D = 2048;
@@ -726,8 +726,13 @@ void Application::updateClothParameters() {
   // checks if parameters need to be updated from gui, and updates them if so,
   // creating a new cloth
   if (m_clothParametersChanged) {
-    m_cloth.initiateNewCloth(m_clothParams, m_device);
+    m_cloth.updateParameters(m_clothParams);
+    m_cloth.updateUniforms(m_device);
     m_clothParametersChanged = false;
+  }
+  if (m_clothReset) {
+    m_cloth.initiateNewCloth(m_clothParams, m_device);
+    m_clothReset = false;
   }
 }
 
@@ -900,13 +905,14 @@ void Application::updateGui(RenderPassEncoder renderPass) {
   // cloth ui
   {
     bool changed = false;
+    bool resetCloth = false;
     ImGui::Begin("cloth");
-    changed =
+    resetCloth =
         ImGui::SliderInt("X Particle Count", &m_clothParams.width, 1, 600) ||
-        changed;
-    changed =
+        resetCloth;
+    resetCloth =
         ImGui::SliderInt("Y Particle Count", &m_clothParams.height, 1, 600) ||
-        changed;
+        resetCloth;
 
     changed =
         ImGui::SliderFloat("Float scale", &m_clothParams.scale, 0.1f, 10.0f) ||
@@ -920,6 +926,22 @@ void Application::updateGui(RenderPassEncoder renderPass) {
               changed;
     changed = ImGui::SliderFloat("Reverse stretch ratio",
                                  &m_clothParams.minStretch, 0.0f, 0.5f) ||
+              changed;
+
+    changed =
+        ImGui::SliderFloat("nearby spring strength",
+                           &m_clothParams.closeSpringStrength, 0.0f, 200.0f) ||
+        changed;
+    changed =
+        ImGui::SliderFloat("far spring strength",
+                           &m_clothParams.farSpringStrength, 0.0f, 200.0f) ||
+        changed;
+
+    changed = ImGui::SliderFloat("wind strength", &m_clothParams.wind_strength,
+                                 0.0f, 200.0f) ||
+              changed;
+    changed = ImGui::SliderFloat3("wind direction x", &m_clothParams.wind_dir.x,
+                                  -1.0f, 1.0f) ||
               changed;
 
     changed = ImGui::SliderFloat("Sphere radius", &m_clothParams.sphereRadius,
@@ -936,6 +958,7 @@ void Application::updateGui(RenderPassEncoder renderPass) {
 
     ImGui::End();
     m_clothParametersChanged = changed;
+    m_clothReset = resetCloth;
   }
 
   {
